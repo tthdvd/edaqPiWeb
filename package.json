@@ -1,0 +1,32 @@
+{
+  "name": "edaqpiweb",
+  "version": "1.0.0",
+  "description": "olyan szoftver fejlesztése Raspberry Pi számítógépre, mely képes kezelni az EDAQ530 és/vagy EDAQ24 univerzális szenzorinterfészeket. Szükséges megfelelő függvénykönyvtárak elkészítése, melyek egyrészt képesek a mérés paraméterezésére és végzésére, a különböző szenzorok adatainak feldolgozására és monitoron való megjelenítésére is.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tthdvd/edaqPiWeb.git"
+  },
+  "author": "Toth David",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tthdvd/edaqPiWeb/issues"
+  },
+  "homepage": "https://github.com/tthdvd/edaqPiWeb#readme",
+  "dependencies": {
+    "body-parser": "^1.18.2",
+    "bootstrap": "^4.0.0",
+    "chart.js": "^2.7.1",
+    "express": "^4.16.3",
+    "ioredis": "^3.2.1",
+    "jquery": "^3.2.1",
+    "path": "^0.12.7",
+    "popper.js": "^1.12.9",
+    "save": "^2.3.1",
+    "socket.io": "^2.0.4",
+    "sqlite3": "^4.0.0"
+  }
+}

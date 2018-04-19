@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <title>Edaq530</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <script src="js/Chart.js"></script>
+    <script src="js/client.js"></script>
+    <script src="js/jquery.js"></script>
+    <script src="js/popper.js"></script>
+    <link href="css/bootstrap.css" rel="stylesheet" media="screen">
+
+    <script src="js/bootstrap.js"></script>
+    <script src="js/moment.js"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            const menuElements = [
+                'selectorDiv',
+                'myChartDiv',
+                'newTask',
+                'task_list_div',
+                'loadScreen',
+                'taskHistoryShow'];
+
+            const historyChannelString = [
+                'first_measurement',
+                'second_measurement',
+                'third_measurement',
+            ];
+
+            const dbChannelString = [
+                'first_channel',
+                'second_channel',
+                'third_channel'
+            ];
+            const channelNames = [
+                'Voltage',
+                'Resistor',
+                'Inamp',
+                'Photo'
+            ];
+
+            let selectHistoryChannel = $(`#channel_history_selector`);
+
+            selectHistoryChannel.change(function () {
+                listHistoryElements()
+                setHistoryChart()
+            })
+
+            let historyData;
+
+            var ctx = document.getElementById("myChart").getContext("2d");
+            var myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [0],
+                    datasets: [{
+                        label: 'Data',
+                        data: [0],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                        ],
+                        borderColor: [
+                            'rgba(255,99,132,1)',
+                        ],
+                        borderWidth: 1
+                    }]
+                }
+            });
+
+
+            let historyCtx = document.getElementById("historyChart").getContext("2d");
+            let historyChart = new Chart(historyCtx, {
+                type: 'line',
+                data: {
+                    labels: [0],
+                    datasets: [{
+                        label: 'Data',
+                        data: [0],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.2)',
+                        ],
+                        borderColor: [
+                            'rgba(255,99,132,1)',
+                        ],
+                        borderWidth: 1
+                    }]
+                }
+            });
+
+            let myChartLabels = myChart.data.labels;
+            let historyChartLabels = historyChart.data.labels;
+
+            var socket = io('localhost:6002');
+
+            var channelSelector = $('#channel_selector');
+            var selectedChannel = channelSelector.val();
+
+            channelSelector.change(function () {
+                selectedChannel = $(this).val();
+                myChart.data.datasets[0].data = [];
+            })
+
+            socket.on("new_value", function (msg) {
+                lastLabel = myChartLabels[myChartLabels.length - 1];
+                myChartLabels.push(lastLabel + 1);
+                myChart.data.datasets[0].data.push(msg[selectedChannel]);
+                myChart.update();
+            });
+
+            socket.on('active_threads', function (msg) {
+                if (msg === 1) {
+                    showHome()
+                } else {
+                    showChart()
+                }
+            });
+
+            loadHome()
+
+            $("#newTask").submit(function () {
+
+                $('#selectorDiv').show();
+                $('#myChartDiv').show();
+                $("#newTask").hide();
+
+                event.preventDefault()
+
+                end_date = moment.utc($("#end_date").val()).local().format();
+                first_equation = $('#first_equation').val();
+                second_equation = $('#second_equation').val();
+                third_equation = $('#third_equation').val();
+                first_channel = $('#first_channel').val();
+                second_channel = $('#second_channel').val();
+                third_channel = $('#third_channel').val();
+                delay = $('#delay').val();
+
+                socket.emit("schedule_task", {
+                    name: $("#name").val(),
+                    end_date: end_date,
+                    first_equation: first_equation,
+                    second_equation: second_equation,
+                    third_equation: third_equation,
+                    first_channel: first_channel,
+                    second_channel: second_channel,
+                    third_channel: third_channel,
+                    delay: delay
+                })
+            });
+
+            function startMesurement() {
+                socket.emit("mesurement_status", 1);
+            }
+
+            function stopMesurement() {
+                socket.emit("mesurement_status", 0);
+            }
+
+            $("#startMes").click(function () {
+                startMesurement();
+            });
+
+            $("#endMes").click(function () {
+                stopMesurement();
+            });
+
+            $("#task_list").click(function () {
+                $('#selectorDiv').hide();
+                $('#myChartDiv').hide();
+                $("#newTask").hide();
+                $("#task_list_div").show();
+
+                $.get('/api/tasks', function (data) {
+                    $(`#task_list_group`).empty();
+                    data.forEach(function (value, index) {
+
+                        $(`#task_list_group`).append(
+                            `<a href="#"
+                                class="list-group-item list-group-item-action"
+                                id="taskList_${value.id}">
+                                    ${value.name}
+                            </a>\n`)
+
+                        $(`#taskList_${value.id}`).click(function () {
+                            let id_split = $(this).attr('id').split('_');
+                            let origin_id = id_split[1];
+                            showHistory(origin_id)
+                        })
+                    })
+                })
+            })
+
+            $(`#home`).click(function () {
+                loadHome()
+            })
+
+            function loadHome() {
+                showLoading();
+                socket.emit('ask_active_threads');
+            }
+
+            function showHome() {
+                $('#selectorDiv').hide();
+                $('#myChartDiv').hide();
+                $(`#loadScreen`).hide();
+                $("#task_list_div").hide();
+                $("#newTask").show();
+            }
+
+            function showChart() {
+                $('#selectorDiv').show();
+                $('#myChartDiv').show();
+                $(`#loadScreen`).hide();
+                $("#task_list_div").hide();
+                $("#newTask").hide();
+            }
+
+            function showHistory(id) {
+                showLoading();
+                $.get(`/api/task/measurements/${id}`, function (data) {
+                    if (data) {
+                        historyData = data;
+                        listHistoryElements();
+                        setHistoryChart()
+                    }
+                });
+
+                $.get(`/api/task/info/${id}`, function (data) {
+                    console.log('task', data)
+                    if (data) {
+                        $(`#channel_history_selector option`).each(function (i) {
+                            console.log(i)
+                            let originalText = $(this).text()
+                            let iterateDbName = dbChannelString[i]
+                            let channelFromDB = data[iterateDbName]
+                            let channelName = channelNames[channelFromDB]
+                            $(this).text(`${originalText} - ${channelName}`)
+                        })
+                    }
+                });
+                setMenuElements('taskHistoryShow');
+            }
+
+            function listHistoryElements() {
+
+                $(`#historyMeasurments`).empty();
+
+                let selectedChannel = selectHistoryChannel.val()
+                let cKey = historyChannelString[selectedChannel]
+                if (historyData) {
+                    historyData.forEach(function (value) {
+                        $(`#historyMeasurments`).append(
+                            `<li class="list-group-item">
+                                <div class="row">
+                                    <div class="col-sm">${value[cKey]}</div>
+                                    <div class="col-sm">${value.created_at}</div>
+                                </div>
+                            </li>`)
+                    })
+                }
+            }
+
+            function setHistoryChart() {
+                historyChart.data.datasets[0].data = [];
+
+                let selectedChannel = selectHistoryChannel.val()
+                let cKey = historyChannelString[selectedChannel]
+
+                if (historyData) {
+
+                    historyData.forEach(function (value) {
+                        console.log('value', value[cKey])
+                        lastLabel = historyChartLabels[historyChartLabels.length - 1];
+                        historyChartLabels.push(lastLabel + 1);
+                        historyChart.data.datasets[0].data.push(value[cKey]);
+                        historyChart.update();
+                    })
+
+                }
+            }
+
+            function showLoading() {
+                setMenuElements('loadScreen')
+            }
+
+            function setMenuElements(element) {
+                menuElements.forEach(function (key) {
+                    if (key === element) {
+                        $(`#${key}`).show();
+                    } else {
+                        $(`#${key}`).hide();
+                    }
+                })
+            }
+
+        });
+    </script>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="#">Edaq530</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav mr-auto">
+            <li class="nav-item active">
+                <a class="nav-link" href="#" id="home">Home</a>
+            </li>
+            <li class="nav-item">
+                <a id="task_list" class="nav-link" href="#">Mérések</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link disabled" href="#">Disabled</a>
+            </li>
+        </ul>
+        <form class="form-inline my-2 my-lg-0">
+            <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+            <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+        </form>
+    </div>
+</nav>
+
+<div class="container">
+
+    <div id="loadScreen" class="mx-auto" style="width: 200px; padding-top: 20vh">
+        <img src="img/load.gif">
+    </div>
+
+    <div id="selectorDiv" style="display: none;">
+        <select id="channel_selector" class="form-control">
+            <option value="0">Első csatorna</option>
+            <option value="1">Második csatorna</option>
+            <option value="2">Harmadik csatorna</option>
+        </select>
+    </div>
+
+    <div id="myChartDiv" class="chart-container" style="position: relative; height:20vh; width:80vw; display: none">
+
+        <canvas id="myChart" width="800" height="400"></canvas>
+    </div>
+
+    <div id="taskHistoryShow" style="display: none">
+        <select id="channel_history_selector" class="form-control">
+            <option value="0">Első csatorna</option>
+            <option value="1">Második csatorna</option>
+            <option value="2">Harmadik csatorna</option>
+        </select>
+
+        <div id="historyChartDiv" class="chart-container" style="height:10vh; width:80vw;">
+            <canvas id="historyChart" width="800" height="200"></canvas>
+
+        </div>
+
+        <ul class="list-group" id="historyMeasurments" style="padding-top: 30vh">
+
+        </ul>
+
+    </div>
+
+    <form id="newTask" style="display: none">
+        <div class="form-group">
+            <label for="name">Feladat neve</label>
+            <input id="name" type="text" required class="form-control">
+        </div>
+
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label for="end_date">Feladat befejezése</label>
+                    <input id="end_date" type="datetime-local" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="col-sm">
+                <div class="form-group">
+                    <label>Mérés ütemezése</label>
+
+                    <div class="input-group mb-3">
+                        <input id="delay" class="form-control" type="number">
+                        <div class="input-group-append">
+                            <span class="input-group-text">másodperc</span>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label for="first_channel">Első csatorna</label>
+                    <select id="first_channel" class="form-control" required>
+                        <option value="0">Voltage</option>
+                        <option value="1">Resistor</option>
+                        <option value="2">Inamp</option>
+                        <option value="3">Photo</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-sm">
+                <div class="form-group">
+                    <label for="first_equation">Első egyenlet</label>
+                    <input id="first_equation" class="form-control" type="text">
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="row">
+
+            <div class="col-sm">
+                <div class="form-group">
+                    <label for="second_channel">Második csatorna</label>
+                    <select id="second_channel" class="form-control" required>
+                        <option value="0">Voltage</option>
+                        <option value="1">Resistor</option>
+                        <option value="2">Inamp</option>
+                        <option value="3">Photo</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="col-sm">
+                <div class="form-group">
+                    <label for="second_equation">Második Egyenlet</label>
+                    <input id="second_equation" class="form-control" type="text">
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-sm">
+                <div class="form-group">
+                    <label for="third_channel">Harmadik csatorna</label>
+                    <select id="third_channel" class="form-control" required>
+                        <option value="0">Voltage</option>
+                        <option value="1">Resistor</option>
+                        <option value="2">Inamp</option>
+                        <option value="3">Photo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="form-group">
+                    <label for="third_equation">Harmadik Egyenlet</label>
+                    <input id="third_equation" class="form-control" type="text">
+                </div>
+            </div>
+        </div>
+
+        <button id="send_data" type="submit" class="btn btn-primary">Mentés</button>
+    </form>
+
+    <div id="task_list_div" style="display: none;">
+        <div class="list-group" id="task_list_group">
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
