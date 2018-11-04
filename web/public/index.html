@@ -170,10 +170,12 @@
             });
 
             $("#task_list").click(function () {
-                $('#selectorDiv').hide();
+                /*$('#selectorDiv').hide();
                 $('#myChartDiv').hide();
                 $("#newTask").hide();
-                $("#task_list_div").show();
+                $("#task_list_div").show();*/
+
+                setMenuElements('task_list_div')
 
                 $.get('/api/tasks', function (data) {
                     $(`#task_list_group`).empty();
@@ -231,11 +233,10 @@
                 });
 
                 $.get(`/api/task/info/${id}`, function (data) {
-                    console.log('task', data)
                     if (data) {
                         $(`#channel_history_selector option`).each(function (i) {
-                            console.log(i)
-                            let originalText = $(this).text()
+
+                            let originalText = $(this).text().split('-')[0]
                             let iterateDbName = dbChannelString[i]
                             let channelFromDB = data[iterateDbName]
                             let channelName = channelNames[channelFromDB]
@@ -274,7 +275,6 @@
                 if (historyData) {
 
                     historyData.forEach(function (value) {
-                        console.log('value', value[cKey])
                         lastLabel = historyChartLabels[historyChartLabels.length - 1];
                         historyChartLabels.push(lastLabel + 1);
                         historyChart.data.datasets[0].data.push(value[cKey]);
@@ -318,14 +318,7 @@
             <li class="nav-item">
                 <a id="task_list" class="nav-link" href="#">Mérések</a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link disabled" href="#">Disabled</a>
-            </li>
         </ul>
-        <form class="form-inline my-2 my-lg-0">
-            <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-            <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
-        </form>
     </div>
 </nav>
 

@@ -3,8 +3,9 @@
 import serial
 import serial.tools.list_ports
 import sys
-import Edaq530Constants as constants
-from Edaq530Converters import Edaq530Converters
+from Edaq530Constants import ChannelTypes
+from Edaq530Constants import Edaq530Converters
+
 class Edaq530(object):
 
     def __init__(self, channels):
@@ -61,7 +62,7 @@ class Edaq530(object):
         self.sendAndReceived("@")
         self.sendAndReceived("E")
 
-        if constants.ChannelType.photo in channels:
+        if ChannelTypes.photo in channels:
             self.sendAndReceived(chr(1))
         else:
             self.sendAndReceived(chr(0))
@@ -71,11 +72,11 @@ class Edaq530(object):
 
         c = 0
 
-        if channels[0] != constants.ChannelType.resistor:
+        if channels[0] != ChannelTypes.resistor:
             c += 1
-        if channels[1] != constants.ChannelType.resistor:
+        if channels[1] != ChannelTypes.resistor:
             c += 2
-        if channels[2] != constants.ChannelType.resistor:
+        if channels[2] != ChannelTypes.resistor:
             c += 4
         self.sendAndReceived(chr(c))
 

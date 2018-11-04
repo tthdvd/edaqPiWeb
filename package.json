@@ -4,7 +4,8 @@
   "description": "olyan szoftver fejlesztése Raspberry Pi számítógépre, mely képes kezelni az EDAQ530 és/vagy EDAQ24 univerzális szenzorinterfészeket. Szükséges megfelelő függvénykönyvtárak elkészítése, melyek egyrészt képesek a mérés paraméterezésére és végzésére, a különböző szenzorok adatainak feldolgozására és monitoron való megjelenítésére is.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node easy_starter.js"
   },
   "repository": {
     "type": "git",

@@ -9,7 +9,7 @@ import threading
 import sys
 
 def redisConnection():
-    r = redis.StrictRedis(host='localhost', port=6379,db=0,password="alma123")
+    r = redis.StrictRedis(host='localhost', port=6379,db=0)
     return r
 
 def listenRedis():
@@ -19,11 +19,11 @@ def listenRedis():
     p.subscribe('edaq530')
     while listening:
         time.sleep(1)
-        mStatusSubs = mesurementStatusSubscriber(p,r)
+        mStatusSubs = measurementStatusSubscriber(p,r)
 """ 
 @TODO EdaqDaemon feliratkozása event alapján
 """
-def mesurementStatusSubscriber(pubsub, redis):
+def measurementStatusSubscriber(pubsub, redis):
     #print(threading.enumerate())
     getMessage = pubsub.get_message()
     if getMessage != None and getMessage.get('type') == 'message':
@@ -59,20 +59,6 @@ def statusChecker(pubsub):
 def startScheduledMeasurment(task, redis, pubsub):
     edaqDaemon = EdaqDaemon(task, redis,pubsub)
     edaqDaemon.start()
-
-def mesurement(r, p, taskId):
-    mesureMent = True
-    with Edaq530([1, 3, 3]) as edaq530:
-        while(mesureMent):
-            time.sleep(1)
-            measuerement = edaq530.getMesurementInCelsius()
-            r.publish('edaq530', json.dumps({'event': 'new_value', 'data': measuerement}))
-
-            mStatus = mesurementStatusSubscriber(p)
-            if mStatus == False:
-                mesureMent = False
-
-    r.publish('edaq530', json.dumps({'event': 'connection_closed', 'data': ''}))
 
 def main():
     listenRedis()

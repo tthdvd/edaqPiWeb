@@ -8,6 +8,7 @@ from models.Task import Task
 import dateutil.parser
 import pytz
 import math
+import Edaq530
 
 
 class EdaqDaemon(threading.Thread):
@@ -23,11 +24,11 @@ class EdaqDaemon(threading.Thread):
         tz = pytz.timezone('Europe/Budapest')
         self.task = Task(self.task_id)
         end_date = dateutil.parser.parse(self.task.end_date)
-        print(self.task.first_channel)
         first_channel = int(self.task.first_channel)
         second_channel = int(self.task.second_channel)
         third_channel = int(self.task.third_channel)
         with Edaq530([first_channel, second_channel, third_channel]) as edaq530:
+            #mérést megvalósító kód
             while self.running:
                 time.sleep(self.task.delay)
                 #measurement = edaq530.getMesurementInCelsius()
@@ -37,7 +38,7 @@ class EdaqDaemon(threading.Thread):
 
                 for i in range(0,3):
                     # ADC to Voltage
-                    x = measurements[i] * 0.001220703;
+                    x = Edaq530Converters.adcCodeToVoltage(measurements[i])
                     calculatedMeasurements.append(eval(self.task.first_equation))
 
                 print(calculatedMeasurements)
