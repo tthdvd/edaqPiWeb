@@ -9,18 +9,20 @@ from Edaq530Constants import Edaq530Converters
 class Edaq530(object):
 
     def __init__(self, channels):
-        self.port = ''
+        self.port = None
         self.channels = channels
 
     def findDevice(self):
         ser = serial.tools.list_ports.comports()
         for item in ser:
-            if hex(item.vid) == hex(0x0403) and hex(item.pid) == hex(0x6001):
-                print('Device is connected')
-                self.port = item.device
+            print(item.vid)
+            if item.vid is not None and item.pid is not None:
+                if hex(item.vid) == hex(0x0403) and hex(item.pid) == hex(0x6001):
+                    print('Device is connected')
+                    self.port = item.device
 
         try:
-            if self.port == '':
+            if self.port is None:
                 raise DeviceIsNotFoundError()
             return 1
         except DeviceIsNotFoundError as e:

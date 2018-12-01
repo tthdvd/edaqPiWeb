@@ -8,7 +8,8 @@ from models.Task import Task
 import dateutil.parser
 import pytz
 import math
-import Edaq530
+#import Edaq530
+from Edaq530Constants import Edaq530Converters
 
 
 class EdaqDaemon(threading.Thread):
@@ -29,19 +30,18 @@ class EdaqDaemon(threading.Thread):
         third_channel = int(self.task.third_channel)
         with Edaq530([first_channel, second_channel, third_channel]) as edaq530:
             #mérést megvalósító kód
+            converter = Edaq530Converters()
             while self.running:
                 time.sleep(self.task.delay)
-                #measurement = edaq530.getMesurementInCelsius()
+                #measurements = edaq530.getMesurementInCelsius()
                 measurements = edaq530.getMesurements()
                 calculatedMeasurements = []
-                print(calculatedMeasurements)
 
                 for i in range(0,3):
                     # ADC to Voltage
-                    x = Edaq530Converters.adcCodeToVoltage(measurements[i])
+                    x = converter.adcCodeToVoltage(measurements[i])
                     calculatedMeasurements.append(eval(self.task.first_equation))
 
-                print(calculatedMeasurements)
                 self.task.insertMeasurements(calculatedMeasurements)
                 self.redis.publish('edaq530', json.dumps({'event': 'new_value', 'data': calculatedMeasurements}))
                 now = datetime.datetime.now()
